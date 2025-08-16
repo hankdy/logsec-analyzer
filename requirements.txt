@@ -1,0 +1,6 @@
+pyyaml
+regex
+pandas
+matplotlib
+rich
+pytest
