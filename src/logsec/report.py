@@ -108,7 +108,9 @@ def summarize_nginx(path: Path) -> Dict:
         if 200 <= code < 300: code_groups["2xx"] += 1 
         elif 300 <= code < 400: code_groups["3xx"] += 1 
         elif 400 <= code < 500: code_groups["4xx"] += 1 
-        else: code_groups["5xx"] += 1
+        elif 500 <= code < 600:
+            code_groups["5xx"] += 1
+        
     return { "total": total, 
              "status_top": status_counter.most_common(5), 
             "path_top": path_counter.most_common(5),
@@ -137,6 +139,8 @@ def summarize_auth(path: Path, window_sec: int = 60, threshold: int = 5) -> Dict
                 "alerts": alerts,
                 "window_sec": window_sec, "threshold": threshold, 
                 }
+
+    
     
 def detect_burst_failures(records: List[Dict], window_sec: int = 60, threshold: int = 5) -> List[Dict[str,Any]]:
     """
@@ -151,7 +155,7 @@ def detect_burst_failures(records: List[Dict], window_sec: int = 60, threshold: 
     for r in sorted(records, key=lambda x: x["ts"]):
         per_ip.setdefault(r["ip"], []).append(r["ts"])
 
-    alerts: List[Dict,Any] = []
+    alerts: List[Dict[str,Any]] = []
     win = timedelta(seconds=window_sec)
 
     for ip, times in per_ip.items():
@@ -166,8 +170,8 @@ def detect_burst_failures(records: List[Dict], window_sec: int = 60, threshold: 
                 q.popleft_ts = q.popleft()
             cur_len = len(q)
             if cur_len > max_count:
-                max_count = cur_len
-                max_window = (q[0], t)
+               max_count = cur_len
+               max_window = (q[0], t)
 
         if max_count >= threshold:
             alerts.append({
@@ -179,3 +183,10 @@ def detect_burst_failures(records: List[Dict], window_sec: int = 60, threshold: 
             })
 
     return alerts
+
+
+# 예시 실패 확인 로그 코드
+# Aug 16 10:00:15 host sshd[1234]: Failed password for root from 203.0.113.10 port 525 ssh2
+
+# 실행 코드
+# python -m src.logsec.main --fail-window-sec 60 --fail-threshold 3
